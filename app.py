@@ -41,7 +41,7 @@ def webhook():
         handle_transaction(data)
         return jsonify({"message": "Transaction processed"}), 200
     except Exception as e:
-        # Log the exception for debugging purposes
+        # Log the exception for debugging
         print(f"Exception during transaction processing: {e}")
         return jsonify({'error': "Transaction failed to process"}), 500
 
