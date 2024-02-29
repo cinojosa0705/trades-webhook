@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Any
 from flask import Flask, request, jsonify
 from dexteritysdk.dex.sdk_context import SDKContext
@@ -7,6 +8,10 @@ from solders.pubkey import Pubkey
 from solana.rpc.api import Client
 import requests
 import json
+from dotenv import load_dotenv
+
+# Load the .env file
+load_dotenv()
 
 rpc = "https://devnet-rpc.shyft.to?api_key=JUvCRqsUep-u4yk0"
 client = Client(rpc)
@@ -31,9 +36,7 @@ def status():
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    data = request.json
-    if not isinstance(data, list) or not data:
-        return jsonify({'error': "Invalid or missing data"}), 400
+    data = request.get_json()
     
     data = data[0]
     if data.get("meta", {}).get("err") is not None:
@@ -60,6 +63,7 @@ def handle_transaction(tr: Dict[str, Any]):
         parsed_trades = [event_to_trade_data(event) for event in fill_events]
         try:
             for trade in parsed_trades:
+                print(trade)
                 proccess_trade(trade)
             print(f"Sent {len(parsed_trades)} trade events.")
         except Exception as e:
@@ -87,7 +91,7 @@ def event_to_trade_data(event: OrderFillEvent) -> Dict[str, Any]:
     return fill
 
 def proccess_trade(trade):
-   url = 'https://dexterity-bot.onrender.com/process-trade'
+   url = my_var = os.environ.get('TRADING_API_URL', 'http://localhost:3000') + '/process-trade'
   
    headers = {'Content-Type': 'application/json'}
   
