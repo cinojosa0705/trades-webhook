@@ -5,6 +5,8 @@ from dexteritysdk.dex.events import OrderFillEvent
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solana.rpc.api import Client
+import requests
+import json
 
 rpc = "https://devnet-rpc.shyft.to?api_key=JUvCRqsUep-u4yk0"
 client = Client(rpc)
@@ -41,7 +43,6 @@ def webhook():
         handle_transaction(data)
         return jsonify({"message": "Transaction processed"}), 200
     except Exception as e:
-        # Log the exception for debugging
         print(f"Exception during transaction processing: {e}")
         return jsonify({'error': "Transaction failed to process"}), 500
 
@@ -56,18 +57,17 @@ def handle_transaction(tr: Dict[str, Any]):
     fill_events = [event for event in events if isinstance(event, OrderFillEvent)]
 
     if fill_events:
-        parsed_trades = [event_to_trade_data(tr, event) for event in fill_events]
-
+        parsed_trades = [event_to_trade_data(event) for event in fill_events]
         try:
             for trade in parsed_trades:
-                print(trade)
+                proccess_trade(trade)
             print(f"Sent {len(parsed_trades)} trade events.")
         except Exception as e:
             print(f"Failed to send fill events due to error: {e}")
     else:
         print("No fill events found in transaction.")
 
-def event_to_trade_data(tr: Dict[str, Any], event: OrderFillEvent) -> Dict[str, Any]:
+def event_to_trade_data(event: OrderFillEvent) -> Dict[str, Any]:
     """
     Parses an OrderFillEvent into a Trade Object.
     
@@ -78,13 +78,28 @@ def event_to_trade_data(tr: Dict[str, Any], event: OrderFillEvent) -> Dict[str, 
     fill = {
         "product": event.product,
         "taker_side": event.taker_side.get_name().lower(),
-        "quote_size": event.quote_size,
-        "base_size": event.base_size,
+        "quote_size": float(event.quote_size),
+        "base_size": float(event.base_size),
         "maker": str(event.maker_trader_risk_group),
         "taker": str(event.taker_trader_risk_group),
-        "price": event.price,
+        "price": float(event.price),
     }
     return fill
 
+def proccess_trade(trade):
+   url = 'https://dexterity-bot.onrender.com/process-trade'
+  
+   headers = {'Content-Type': 'application/json'}
+  
+   data = json.dumps(trade)
+  
+   try:
+       response = requests.post(url, headers=headers, data=data)
+      
+       print("Status Code:", response.status_code)
+       print("Response:", response.json())
+   except Exception as e:
+       print(f"An error occurred: {e}")
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port="5000")
+    app.run(debug=True, host='0.0.0.0', port="80")
